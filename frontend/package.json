@@ -1,0 +1,57 @@
+{
+  "name": "drone-rl-mod01-demo",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "api:lint": "redocly lint ../API_design/MOD-01_IDENTITY_ACCESS_MANAGEMENT/contracts/openapi.yaml",
+    "api:generate": "openapi-typescript ../API_design/MOD-01_IDENTITY_ACCESS_MANAGEMENT/contracts/openapi.yaml -o src/generated/api-schema.ts",
+    "api:check": "node scripts/check-generated-client.mjs",
+    "format:check": "prettier --check .",
+    "lint": "eslint .",
+    "typecheck": "tsc -b --pretty false",
+    "test": "vitest run",
+    "build": "tsc -b && vite build",
+    "test:e2e": "node scripts/run-e2e.mjs"
+  },
+  "dependencies": {
+    "@ant-design/icons": "^6.1.0",
+    "@tanstack/react-query": "^5.90.0",
+    "antd": "^6.1.0",
+    "openapi-fetch": "^0.15.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-router-dom": "^7.9.0"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.11.0",
+    "@eslint/js": "^9.39.0",
+    "@playwright/test": "^1.56.0",
+    "@redocly/cli": "^2.12.0",
+    "@testing-library/jest-dom": "^6.9.0",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.0",
+    "@types/node": "^24.10.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^5.1.0",
+    "eslint": "^9.39.0",
+    "eslint-plugin-react-hooks": "^7.0.0",
+    "eslint-plugin-react-refresh": "^0.4.24",
+    "globals": "^16.5.0",
+    "jsdom": "^27.2.0",
+    "msw": "^2.12.0",
+    "openapi-typescript": "^7.10.0",
+    "prettier": "^3.6.0",
+    "typescript": "~5.9.0",
+    "typescript-eslint": "^8.48.0",
+    "vite": "^7.2.0",
+    "vitest": "^3.2.0"
+  },
+  "msw": {
+    "workerDirectory": [
+      "public"
+    ]
+  }
+}
