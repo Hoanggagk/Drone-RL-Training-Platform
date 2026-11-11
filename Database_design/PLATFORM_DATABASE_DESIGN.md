@@ -2,11 +2,19 @@
 
 | Thuộc tính | Giá trị |
 |---|---|
-| Phiên bản | 0.1 — đề xuất, chưa phải migration |
+| Phiên bản | 0.2 — thiết kế logic và baseline migration MVP |
 | Ngày rà soát | 07/11/2026 |
 | Phạm vi | 17 module trong `Module_design/MODULE_DESIGN.md` và ba thư mục đặc tả module |
 | Hệ quản trị | PostgreSQL theo `ADR-005`; Supabase PostgreSQL/Auth là phương án triển khai cần phê duyệt |
 | Dữ liệu tệp | Local Artifact Storage trong MVP theo `ADR-006`; Supabase Storage là phương án sau, chưa được chọn |
+
+> **Trạng thái triển khai:** `database/migrations/0001_mvp_baseline.sql` hiện thực lát cắt
+> PostgreSQL 15+ độc lập provider cho project/experiment, catalog version, immutable config
+> snapshot, training/evaluation run, PostgreSQL-backed job claim, attempt/lease, metric,
+> checkpoint, artifact metadata và operational event. Baseline chưa phải tuyên bố hỗ trợ
+> simulator/task/algorithm; các catalog entry vẫn ở trạng thái `configured`/`candidate` cho
+> đến khi có contract/integration test. Supabase Auth/Data API/RLS, ORM và retention policy
+> vẫn là TBD, không được migration tự quyết định.
 
 ## 1. Căn cứ và nguyên tắc
 
@@ -295,7 +303,7 @@ Theo [Supabase changelog](https://supabase.com/changelog/45329-breaking-change-t
 | `MD-Q09/10`, `Q-016/017/018/019` | Metric definitions, evaluation protocol và trajectory/export scope. |
 | `MD-Q11`, `Q-022/024` | Backup/retention/quota, raw video/sensor có ngoài MVP không. |
 
-## 9. Kiểm chứng trước triển khai
+## 9. Kiểm chứng trước triển khai và mở rộng baseline
 
 - Chốt schema workflow (`supabase/schemas` declarative hay migration imperative) và chọn provider Auth; không áp migration khi các FK cross-module/JSON contract chưa được review.
 - Kiểm tra FK/cascade/index bằng catalog PostgreSQL; migration áp dụng trên DB sạch và DB có dữ liệu giả lập.
@@ -306,9 +314,28 @@ Theo [Supabase changelog](https://supabase.com/changelog/45329-breaking-change-t
 - Test authorization/RLS khi dùng Data API: anon/user khác project/admin hạn quyền; UPDATE không chuyển owner; download/export kiểm tra lại quyền.
 - Chạy database advisors và `EXPLAIN (ANALYZE, BUFFERS)` cho claim queue, lịch sử run và metric chart trên dữ liệu đại diện. Đây là **tài liệu thiết kế**, chưa có DB/runtime để chạy các test truy vấn.
 
+Baseline hiện có smoke test tại `database/tests/0001_mvp_baseline_test.sql`. Test kiểm tra
+migration trên database rỗng, snapshot bất biến, một job không bị claim hai lần, điều kiện
+artifact `available` và semantics metric `unavailable`. Parallel claim nhiều connection,
+stale fencing token, crash reconciliation, backup/restore và dữ liệu benchmark vẫn phải được
+bổ sung trước khi công bố worker/database production-ready.
+
 ## 10. Nguồn kỹ thuật
 
 - [Supabase User Management](https://supabase.com/docs/guides/auth/managing-user-data), [Supabase RLS](https://supabase.com/docs/guides/database/postgres/row-level-security), [Securing your API](https://supabase.com/docs/guides/api/securing-your-api).
 - [Supabase breaking change về Data API grants](https://supabase.com/changelog/45329-breaking-change-tables-not-exposed-to-data-and-graphql-api-automatically).
 - [PostgreSQL constraints](https://www.postgresql.org/docs/current/ddl-constraints.html), [indexes](https://www.postgresql.org/docs/current/indexes.html), [row locking và SKIP LOCKED](https://www.postgresql.org/docs/current/sql-select.html#SQL-FOR-UPDATE-SHARE).
 - Skill `supabase-postgres-best-practices`: quy tắc kiểu dữ liệu, PK, FK index, composite/partial index, least privilege, RLS, `SKIP LOCKED`, transaction ngắn và batch insert.
+
+## 11. Ma trận triển khai baseline
+
+| Năng lực | Hiện thực | Truy vết | Trạng thái |
+|---|---|---|---|
+| Project/experiment và lineage | `research.projects`, `research.experiments` | `FR-005–FR-010`, `AC-001/015`, `MOD-02` | Baseline |
+| Config snapshot bất biến | `config.snapshots` + trigger chặn update/delete | `FR-009`, `AC-015`, `MOD-06` | Baseline |
+| Training run và idempotency | `execution.training_runs` | `AC-006/008/017`, `MOD-07` | Baseline; transition service còn cần triển khai |
+| Evaluation tách biệt, policy checksum | `execution.evaluation_runs` | `AC-011/012`, `NFR-020`, `ADR-007` | Baseline |
+| Atomic claim và fencing | `execution.claim_next_job`, `execution.attempts` | `ADR-005`, `NFR-006`, `MOD-12` | Baseline; parallel/fault test còn thiếu |
+| Artifact/checkpoint metadata | `platform.artifacts`, `results.checkpoints` | `AC-009/010`, `ADR-006`, `NFR-007/021` | Baseline; file reconciliation thuộc bước sau |
+| Metrics theo phase | `results.training_metrics`, `results.evaluation_metrics` | `AC-007/012/013`, `ADR-008` | Baseline |
+| Lỗi theo tầng | `platform.operational_events` | `AC-017`, `NFR-004`, `MOD-17` | Baseline |
